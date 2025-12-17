@@ -1,0 +1,265 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebify | Timer</title>
+    
+    <link rel="stylesheet" href="../navbar.css">
+    <link rel="stylesheet" href="../HomePage/home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* Base Dark Theme */
+        body { overflow-y: auto; background-color: #0f0f0f; color: white; }
+
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+            min-height: 80vh; /* Centers timer vertically */
+        }
+
+        /* Controls */
+        .controls-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .custom-input {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            outline: none;
+        }
+        
+        .btn-small {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .btn-small:hover { background: #444; }
+
+        /* Timer Circle */
+        .timer-circle {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .progress-ring { transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .progress-ring__circle { stroke-width: 6; stroke-linecap: round; fill: transparent; r: 140; cx: 150; cy: 150; }
+        .ring-bg { stroke: #222; }
+        .ring-progress { stroke: #00d4ff; transition: stroke-dashoffset 0.35s; stroke-dasharray: 880; stroke-dashoffset: 0; }
+        
+        .time-display {
+            position: absolute;
+            font-size: 4.5rem;
+            font-weight: 700;
+            color: white;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Simplified Task Setup (No Plus Button) */
+        .task-setup {
+            width: 100%;
+            max-width: 300px; /* Smaller width since button is gone */
+            margin-top: 10px;
+        }
+        select.custom-input { width: 100%; cursor: pointer; }
+
+        /* Main Buttons */
+        .main-controls { margin-top: 25px; display: flex; gap: 20px; }
+        .btn-main { padding: 15px 40px; font-size: 1.2rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
+        .btn-start { background: #00d4ff; color: #000; }
+        .btn-reset { background: #222; color: #fff; border: 1px solid #444; }
+        
+        .nav-toggle { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-header">
+        <div class="logo">REBIFY</div>
+        <div class="hamburger" id="hamburgerBtn"><i class="fas fa-bars"></i></div>
+    </div>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header"><h2>REBIFY</h2></div>
+        <ul class="nav-links">
+            <li><a onclick="Home()" ><i class="fas fa-home"></i> Home</a></li>
+            <li><a onclick="MultipleQuiz()"><i class="fas fa-list-ul"></i> Multiple Quiz</a></li>
+                        <li><a onclick="Identification()" ><i class="fas fa-layer-group"></i> Flash Cards</a></li>
+
+            <li><a onclick="Identification()" ><i class="fas fa-fingerprint"></i> Identification</a></li>
+            <li class="active"><a href="#"><i class="fas fa-stopwatch"></i>Timer</a></li>
+            <li class="logout-item"><a href="../logout.php" style="color: #ff4d4d;"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div class="timer-container">
+            
+            <div class="controls-row">
+                <button class="btn-small" onclick="setMode('Focus', 25)">Focus (25m)</button>
+                <button class="btn-small" onclick="setMode('Short Break', 5)">Short Break (5m)</button>
+                
+                <div style="display:flex; align-items:center; gap:5px; margin-left:10px;">
+                    <input type="number" id="customMin" class="custom-input" style="width:70px;" placeholder="Min" min="1">
+                    <button class="btn-small" onclick="setCustomTime()">Set</button>
+                </div>
+            </div>
+
+            <div class="timer-circle">
+                <svg class="progress-ring" width="300" height="300">
+                    <circle class="progress-ring__circle ring-bg" />
+                    <circle class="progress-ring__circle ring-progress" id="progressRing" />
+                </svg>
+                <div class="time-display" id="timeDisplay">25:00</div>
+            </div>
+
+         
+            <div class="main-controls">
+                <button class="btn-main btn-start" id="startBtn" onclick="toggleTimer()">Start</button>
+                <button class="btn-main btn-reset" onclick="resetTimer()">Reset</button>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="../navbar.js"></script>
+    <script>
+     
+
+        // --- TIMER VARIABLES ---
+        let timerInterval;
+        let isRunning = false;
+        let totalTime = 25 * 60;
+        let timeLeft = 25 * 60;
+        let currentMode = 'Focus';
+        
+        const display = document.getElementById('timeDisplay');
+        const ring = document.getElementById('progressRing');
+        const circumference = 2 * Math.PI * 140;
+        
+        ring.style.strokeDasharray = `${circumference} ${circumference}`;
+        ring.style.strokeDashoffset = 0;
+
+        function updateDisplay(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            display.innerText = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+            document.title = `${m}:${s < 10 ? '0' : ''}${s} - Rebify`;
+        }
+
+        function setProgress(percent) {
+            ring.style.strokeDashoffset = circumference - (percent / 100) * circumference;
+        }
+
+        function setMode(modeName, minutes) {
+            resetTimer();
+            currentMode = modeName;
+            totalTime = minutes * 60;
+            timeLeft = totalTime;
+            updateDisplay(timeLeft);
+            ring.style.stroke = (modeName === 'Short Break') ? '#28a745' : '#00d4ff';
+        }
+
+        function setCustomTime() {
+            const mins = parseInt(document.getElementById('customMin').value);
+            if(mins > 0) setMode('Custom', mins);
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                isRunning = false;
+                document.getElementById('startBtn').innerText = "Start";
+            } else {
+                isRunning = true;
+                document.getElementById('startBtn').innerText = "Pause";
+                timerInterval = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateDisplay(timeLeft);
+                        setProgress((timeLeft / totalTime) * 100);
+                    } else {
+                        finishTimer();
+                    }
+                }, 1000); 
+            }
+        }
+
+        function finishTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            document.getElementById('startBtn').innerText = "Start";
+            playSound();
+            saveSession();
+            alert("Timer Finished!");
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            document.getElementById('startBtn').innerText = "Start";
+            timeLeft = totalTime;
+            updateDisplay(timeLeft);
+            setProgress(100);
+        }
+
+        function saveSession() {
+            const labelSelect = document.getElementById('taskLabel');
+            let label = labelSelect.value;
+            if(!label) label = "Unlabeled Session";
+
+            const duration = Math.round(totalTime / 60);
+
+            fetch('../save_session.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'save_session',
+                    task: label,
+                    mode: currentMode,
+                    duration: duration
+                })
+            }).then(() => {
+                // No reload needed since history is gone, just log it
+                console.log("Session saved");
+            });
+        }
+
+        function playSound() {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        }
+
+        updateDisplay(timeLeft);
+
+        document.getElementById('hamburgerBtn').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('active');
+        });
+    </script>
+</body>
+</html>

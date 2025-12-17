@@ -1,0 +1,366 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebify | Flashcards</title>
+    
+    <link rel="stylesheet" href="../navbar.css">
+    <link rel="stylesheet" href="../HomePage/home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
+
+    <style>
+        /* --- 1. SIDEBAR UPLOAD BUTTON FIX --- */
+        .nav-upload-item { 
+            border-bottom: 1px solid #222; 
+            margin-bottom: 10px; 
+        }
+        .nav-upload-item label { 
+            display: flex; 
+            align-items: center; 
+            padding: 18px 25px; 
+            cursor: pointer; 
+            color: #00d4ff; 
+            font-weight: bold; 
+            font-size: 13px; 
+            text-transform: uppercase; 
+        }
+        .nav-upload-item i { 
+            margin-right: 15px; 
+            width: 20px; 
+            text-align: center; 
+        }
+
+        /* --- 2. FLASHCARD STYLES --- */
+        .flashcard-container {
+            perspective: 1000px;
+            width: 100%;
+            max-width: 600px;
+            height: 350px;
+            margin: 30px auto;
+            cursor: pointer;
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .flashcard-container.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 0px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border: 1px solid #333;
+            flex-direction: column;
+        }
+
+        .flashcard-front {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .flashcard-back {
+            background-color: #0f0f0f;
+            color: #00d4ff;
+            transform: rotateY(180deg);
+            border-color: #00d4ff;
+        }
+
+        .card-label {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .card-content {
+            font-size: 1.5rem;
+            font-weight: 600;
+            line-height: 1.6;
+        }
+
+        /* Controls */
+        .controls-area {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .btn-control {
+            background: #222;
+            color: white;
+            border: 1px solid #444;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn-control:hover { background: #00d4ff; color: #000; border-color: #00d4ff; }
+        
+        .progress-indicator {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #888;
+        }
+
+        /* Base Card Styling (from multiple.css usually) */
+        .card {
+            background: #0f0f0f;
+            padding: 30px;
+            border: 1px solid #1a1a1a;
+            border-radius: 0px;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: #fff;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 5px;
+        }
+
+        .nav-toggle { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-header">
+        <div class="logo">REBIFY</div>
+        <div class="hamburger" id="hamburgerBtn"><i class="fas fa-bars"></i></div>
+    </div>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header"><h2>REBIFY</h2></div>
+        <ul class="nav-links">
+            <li class="nav-upload-item">
+                <input type="file" id="navPdfUpload" accept=".pdf,.txt" hidden>
+                <label for="navPdfUpload"><i class="fas fa-file-pdf" style="color: #ff4d4d;"></i> <span id="navFileName">Upload Material</span></label>
+            </li>
+            <li><a onclick="Home()" href="#"><i class="fas fa-home"></i> Home</a></li>
+            <li><a onclick="MultipleQuiz()" href="#"><i class="fas fa-list-ul"></i> Multiple Quiz</a></li>
+            <li class="active"><a href="#"><i class="fas fa-layer-group"></i> Flash Cards</a></li>
+            <li><a onclick="Identification()" href="#"><i class="fas fa-fingerprint"></i> Identification</a></li>
+            <li><a onclick="Pomodoro()" href="#"><i class="fas fa-stopwatch"></i> Timer</a></li>
+            <li class="logout-item">
+                <a href="../logout.php" style="color: #ff4d4d;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="main-content">
+        <div id="quiz-container">
+            <header class="quiz-top">
+                <h1>Flash <span>Cards</span></h1>
+                <p id="quiz-status">Upload notes to generate study cards.</p>
+            </header>
+
+            <div id="setup-section" class="card">
+                <h3>Card Settings</h3>
+                <div class="input-group" style="margin-top:15px; margin-bottom:20px;">
+                    <label style="display:block; margin-bottom:5px; color:#aaa;">Study Material Content</label>
+                    <textarea id="quizText" style="width:100%; min-height:150px; background:#111; color:#ddd; border:1px solid #333; padding:10px; border-radius:5px;" placeholder="Paste text here or upload a file..."></textarea>
+                </div>
+                <button onclick="processFlashcards()" class="btn-primary">
+                    Generate Cards
+                </button>
+            </div>
+
+            <div id="loading-spinner" style="display:none; text-align:center; padding: 50px;">
+                <i class="fas fa-layer-group fa-spin" style="font-size: 3rem; color: #00d4ff;"></i>
+                <p style="margin-top:15px;">Finding definitions...</p>
+            </div>
+
+            <div id="card-section" style="display:none;">
+                
+                <div class="progress-indicator" id="progressText">Card 1 of 10</div>
+
+                <div class="flashcard-container" onclick="flipCard()">
+                    <div class="flashcard-inner" id="cardInner">
+                        <div class="flashcard-front">
+                            <span class="card-label">Term / Question</span>
+                            <div class="card-content" id="cardFrontText">...</div>
+                            <div style="margin-top:20px; font-size:0.8rem; color:#444;">(Click to flip)</div>
+                        </div>
+                        <div class="flashcard-back">
+                            <span class="card-label">Definition / Answer</span>
+                            <div class="card-content" id="cardBackText">...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls-area">
+                    <button class="btn-control" onclick="prevCard()"><i class="fas fa-arrow-left"></i> Prev</button>
+                    <button class="btn-control" onclick="flipCard()"><i class="fas fa-sync-alt"></i> Flip</button>
+                    <button class="btn-control" onclick="nextCard()">Next <i class="fas fa-arrow-right"></i></button>
+                </div>
+
+                <div style="text-align:center; margin-top:30px;">
+                    <button onclick="location.reload()" style="background:transparent; border:none; color:#555; cursor:pointer; text-decoration:underline;">Create New Set</button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="../navbar.js"></script>
+    <script>
+      
+
+        // --- PDF HANDLING ---
+        document.getElementById('navPdfUpload').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('navFileName').textContent = "Processing...";
+            if (file.type === "application/pdf") {
+                const text = await extractTextFromPDF(file);
+                document.getElementById('quizText').value = text;
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => document.getElementById('quizText').value = e.target.result;
+                reader.readAsText(file);
+            }
+            document.getElementById('navFileName').textContent = file.name.substring(0, 15) + "...";
+        });
+
+        async function extractTextFromPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            let fullText = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+            }
+            return fullText;
+        }
+
+        // --- FLASHCARD LOGIC ---
+        let cards = [];
+        let currentIndex = 0;
+
+        function processFlashcards() {
+            const text = document.getElementById('quizText').value;
+            if (text.length < 50) return alert("Please provide more text content.");
+
+            document.getElementById('setup-section').style.display = 'none';
+            document.getElementById('loading-spinner').style.display = 'block';
+
+            setTimeout(() => {
+                cards = generateCardsFromText(text);
+                if (cards.length === 0) {
+                    alert("Could not find any clear definitions. Try pasting text with 'Term is Definition' format.");
+                    location.reload();
+                } else {
+                    document.getElementById('loading-spinner').style.display = 'none';
+                    document.getElementById('card-section').style.display = 'block';
+                    showCard(0);
+                }
+            }, 1000);
+        }
+
+        // The Smart Algorithm
+        function generateCardsFromText(text) {
+            let generated = [];
+            // Regex to find sentences that look like definitions
+            const regex = /([A-Z][^.?!]{1,50})\s+(?:is a|is an|is the|are|means|refers to|defined as)\s+([^.?!]+[.?!])/g;
+            
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                let term = match[1].trim();
+                let def = match[2].trim();
+                
+                term = term.replace(/^(The|A|An)\s+/i, ""); 
+                
+                if (def.length > 5 && def.length < 200) {
+                    generated.push({ front: term, back: def });
+                }
+            }
+
+            // Fallback: If regex fails, try splitting by newlines and colons (Term: Definition)
+            if (generated.length < 3) {
+                const lines = text.split('\n');
+                lines.forEach(line => {
+                    if (line.includes(':')) {
+                        const parts = line.split(':');
+                        if (parts[0].length < 50 && parts[1].length > 5) {
+                            generated.push({ front: parts[0].trim(), back: parts[1].trim() });
+                        }
+                    }
+                });
+            }
+
+            return generated;
+        }
+
+        function showCard(index) {
+            currentIndex = index;
+            document.getElementById('cardFrontText').innerText = cards[index].front;
+            document.getElementById('cardBackText').innerText = cards[index].back;
+            document.getElementById('progressText').innerText = `Card ${index + 1} of ${cards.length}`;
+            document.querySelector('.flashcard-container').classList.remove('flipped');
+        }
+
+        function flipCard() {
+            document.querySelector('.flashcard-container').classList.toggle('flipped');
+        }
+
+        function nextCard() {
+            if (currentIndex < cards.length - 1) {
+                const container = document.querySelector('.flashcard-container');
+                if (container.classList.contains('flipped')) {
+                    container.classList.remove('flipped');
+                    setTimeout(() => showCard(currentIndex + 1), 300);
+                } else {
+                    showCard(currentIndex + 1);
+                }
+            }
+        }
+
+        function prevCard() {
+            if (currentIndex > 0) {
+                const container = document.querySelector('.flashcard-container');
+                if (container.classList.contains('flipped')) {
+                    container.classList.remove('flipped');
+                    setTimeout(() => showCard(currentIndex - 1), 300);
+                } else {
+                    showCard(currentIndex - 1);
+                }
+            }
+        }
+
+        // Mobile Sidebar
+        document.getElementById('hamburgerBtn').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('active');
+        });
+    </script>
+</body>
+</html>
