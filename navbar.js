@@ -7,7 +7,7 @@ function MultipleQuiz() {
 }
 
 function FlashCard() {
-    window.location.href = "../Flashcard/flash.html";
+    window.location.href = "../FlashCard/flash.html";
 }
 
 function Identification() {
