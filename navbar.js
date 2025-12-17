@@ -17,8 +17,7 @@ function Identification() {
 function Pomodoro() {
     window.location.href = "../Pomodoro/pomo.html";
 }
-
-function Logout() {
+ 
     // Navigate up one level to your root logout file
     window.location.href = "../logout.html";
 }
