@@ -1,9 +1,9 @@
 function Home() {
-    window.location.href = "../HomePage/home.html";
+    window.location.href = "../HomePage/Home.html";
 }
 
 function MultipleQuiz() {
-    window.location.href = "../MultipleChoices/multiple.html";
+    window.location.href = "../MultipleChoices/Multiple.html";
 }
 
 function FlashCard() {
